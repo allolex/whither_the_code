@@ -1,0 +1,351 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>Whither the code?</title>
+
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/black.css">
+
+    <!-- Theme used for syntax highlighting of code -->
+    <link rel="stylesheet" href="lib/css/zenburn.css">
+
+    <!-- Printing and PDF exports -->
+    <script>
+      var link = document.createElement( 'link' );
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+      document.getElementsByTagName( 'head' )[0].appendChild( link );
+    </script>
+
+    <style>
+      .reveal h1 { color: rgb(158,59,54) }
+      .reveal h2 { color: rgb(143,168,162) }
+    </style>
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <section>
+          <section data-markdown>
+            # Whither the code?
+          </section>
+
+          <section data-markdown>
+            # Whither the code?
+
+            ## Refactoring for readability and maintainability
+          </section>
+
+          <section data-markdown>
+            # Whither the code?
+
+            ## Refactoring for
+            ## readability and
+            ## maintainability
+          </section>
+        </section>
+
+        <section>
+          <section>
+            <h2>Rules</h2>
+            <h3 class="fragment">(There are a lot of rules.)</h3>
+            <p class="fragment">"Keep your methods short."</p>
+            <p class="fragment">"Thin controllers, fat models."</p>
+            <p class="fragment">Use service objects.</p>
+            <p class="fragment">Use service oriented architecture (SOA).</p>
+            <p class="fragment">Don't use Rails <span class="fragment">for everything.</span></p>
+          </section>
+
+          <section>
+            <h2>Sandi's Rules</h2>
+            <p class="fragment"><span class="fragment highlight-blue">Classes =&lt; 100 LOC.</span></p>
+            <p class="fragment"><span class="fragment highlight-blue">Methods =&lt; 5 LOC.</span></p>
+            <p class="fragment"><span class="fragment highlight-blue">Methods take =&lt; 4 parameters.</span></p>
+            <p class="fragment"><span class="fragment fade-out">Something about how many objects controllers can instantiate.</span></p>
+          </section>
+
+          <section>
+            <h2>So why all this focus on <em>lines of code</em>?</h2>
+
+            <p class="fragment"><span class="fragment highlight-red">Managing size means managing complexity.</span></p>
+
+            <p class="fragment">When you manage complexity, you write <em>better</em> code.</p>
+          </section>
+        </section>
+
+        <section>
+          <section data-markdown>
+            ## Ensmallening
+
+            So much of refactoring is about taking *large* things and making them *smaller*.
+          </section>
+
+          <section>
+            <h3>Ensmallening: Extract to method</h3>
+
+            <p class="fragment">This one's about decluttering methods.</p>
+          </section>
+
+          <section>
+            <h3>Ensmallening: Extract to method</h3>
+
+            <pre><code data-trim data-noescape>
+              def some_method
+                default_options = {
+                  pages: 3,
+                  color: :yellow,
+                  style: :pamphlet
+                }
+
+                resource = API::Resource.find(default_options)
+                …
+              end
+            </code></pre>
+          </section>
+
+          <section>
+            <h3>Ensmallening: Extract to method</h3>
+
+            <pre><code data-trim data-noescape>
+              def some_method
+                <mark>default_options = {
+                  pages: 3,
+                  color: :yellow,
+                  style: :pamphlet
+                }</mark>
+
+                resource = API::Resource.find(default_options)
+                …
+              end
+            </code></pre>
+          </section>
+
+          <section>
+            <h3>Ensmallening: Extract to method</h3>
+
+            <pre><code data-trim data-noescape>
+              def some_method
+                resource = API::Resource.find(default_options)
+                …
+              end
+
+              def default_options
+                {
+                  pages: 3,
+                  color: :yellow,
+                  style: :pamphlet
+                }
+              end
+            </code></pre>
+          </section>
+        </section>
+
+        <section>
+          <section>
+            <h3>Ensmallening: <a href="https://refactoring.com/catalog/pullUpMethod.html">Pull up method</a></h3>
+            <p class="fragment">This one's about avoiding repetition.</p>
+            <p class="fragment">It's also about making your life easier by allowing you to change code in one place.</p>
+          </section>
+
+          <section>
+            <h3>Ensmallening: <a href="https://refactoring.com/catalog/pullUpMethod.html">Pull up method</a></h3>
+            <h4>Questions</h4>
+            <p class="fragment">Do I have two or more classes that seem to be the same kind of things?</p>
+            <p class="fragment">Do these classes fit under or already inherit from the same superclass?</p>
+            <p class="fragment">Do I have methods in the subclasses that I can <em>pull up into the superclass</em>?</p>
+          </section>
+        </section>
+
+        <section>
+          <section>
+            <h3>Ensmallening: Extract to module</h3>
+            <p class="fragment">This one's about code re-use as much as it is about simplification.</p>
+            <p class="fragment">Do I have a bunch of methods that seem like they're all about the same thing?</p>
+            <p class="fragment">Do I have lots of repetition across classes?</p>
+          </section>
+
+          <section>
+            <h3>Ensmallening: Extract to module</h3>
+            <p>Modules can be simple, themed collections of methods.</p>
+          </section>
+
+          <section>
+            <h3>Ensmallening: Extract to module</h3>
+            <h4>Special syntax in a PORO</h4>
+
+            <pre><code data-trim>
+              module Collectible
+                # …
+                # Use this initializer when included in a class
+                def self.included(base)
+                  base.class_exec do
+                    def initialize(resource_list = []) # rubocop:disable NestedMethodDefinition
+                      @members = []
+
+                      resource_list.each do |resource_params|
+                        members << self.class.resource_class.new(resource_params)
+                      end
+                    end
+                  end
+                end
+              end
+            </code></pre>
+          </section>
+
+          <section>
+            <h3>Ensmallening: Extract to module</h3>
+            <p>Modules can also represent discrete slices of functionality called "cross-cutting concerns".</p>
+            <p class="fragment">Cross-cutting concerns, or just "concerns", are one of the most common ways Rubyists organize their code.</p>
+            <p class="fragment">There's even special syntax for it, and Rails has <code>ActiveSupport::Concern</code>.</p>
+          </section>
+      </section>
+
+        <section>
+          <section>
+            <h2>Organization</h2>
+            <p class="fragment">Cross-cutting concerns, or just "concerns", are one of the most common ways Rubyists organize their code.</p>
+          </section>
+
+          <section>
+            <h2>When things get complex, extract.</h2>
+            <p class="fragment">When your methods get complex, extract code to another method.</p>
+            <p class="fragment">When your methods grow too numerous, extract them into modules and classes.</p>
+          </section>
+
+          <section>
+            <h2>Refactor before adding a feature</h2>
+            <p>Much like a surgeon debrides a wound before closing it up, these
+            refactorings also allow you to tidy your code up before adding a
+            new feature.</p>
+          </section>
+
+          <section>
+            <h2>Are you ready to extract?</h2>
+            <p>You're ready to refactor when you can answer these questions.</p>
+
+            <ul>
+              <li>Is this logic used by other classes?</li>
+              <li>Is it clear to me (at this point) where the boundaries of
+                this logic end? (Can I create a good interface for it?)</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>Are you ready to extract?</h2>
+
+            <p>That "interface" question is important. It's cheaper to leave in
+            repetition for a while than to create an incorrect abstraction,
+            i.e. a bad interface.  It's also better to leave it if you're
+            making your code less readable or searchable; other people have to
+            work with it, after all.</p>
+          </section>
+
+          <section>
+            <h2>Service Objects</h2>
+            <p>You know you need a service object when:</p>
+            <ul>
+              <li class="fragment">Referring to models that are not the current
+                model.</li>
+              <li class="fragment">You’re talking to something that isn’t the current app. API
+                calls should be wrapped in an object.</li>
+              <li class="fragment">When the action you’re performing has multiple strategies,
+                for example multiple authentication strategies as part of a
+                user model.</li>
+            </ul>
+          </section>
+        </section>
+
+        <section>
+          <section>
+            <h2>Presenters, Decorators, and Composites</h2>
+
+            <p>They're similar, and familiarly confusing.</p>
+          </section>
+
+          <section>
+            <h2>Presenters</h2>
+
+            <p>Presenters represent a strategy for dealing with the
+            presentation logic for a model. Decorators and Composites are
+            kinds of presenters.</p>
+          </section>
+
+          <section>
+            <h2>Presentation logic in the model?</h2>
+
+            <p>Whose responsibility is it?</p>
+            <p>There's a space in-between models and views.</p>
+          </section>
+
+          <section>
+            <h2>Presentation logic in the view?</h2>
+
+            <p>Aren't views <em>for</em> presentation?</p>
+            <p><code>number_to_currency()</code> everywhere</p>
+          </section>
+
+          <section>
+            <h2>Composites</h2>
+
+            <p>Composites are <em>composed of</em> multiple components,
+            usually models.</p>
+
+            <p>Think of when you'd use view partials, e.g. an invoice with
+            line items. That invoice might have a summary of total line
+            items, with the total price and a tax calculation for each line
+            item.</p>
+          </section>
+
+          <section>
+            <h2>Decorators</h2>
+
+            <p>Decorators allow objects to take on new responsibilities that are not "core".</p>
+            <p>You can use decorators instead of subclassing.</p>
+            <p>Use the <a href="https://robots.thoughtbot.com/evaluating-alternative-decorator-implementations-in#the-quotplain-old-ruby-objectquot-poro-decorator">PORO decorator pattern</a>.</p>
+          </section>
+
+          <section>
+            <h2>Presenters</h2>
+
+            <p>Think of presenters as <strong>presentation service
+            objects</strong>. This pattern allows you encapsulate complex
+            presentation logic across serveral components without having to
+            alter the innards of those components.</p>
+          </section>
+        </section>
+
+        <section data-markdown>
+          ## Links
+
+          - https://github.com/hakimel/reveal.js
+          - https://refactoring.com/
+          - https://robots.thoughtbot.com/decorators-compared-to-strategies-composites-and
+          - https://robots.thoughtbot.com/evaluating-alternative-decorator-implementations-in
+          - https://robots.thoughtbot.com/sandi-metz-rules-for-developers
+        </section>
+      </div>
+    </div>
+
+    <script src="lib/js/head.min.js"></script>
+    <script src="js/reveal.js"></script>
+
+    <script>
+      // More info https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+        history: true,
+
+        // More info https://github.com/hakimel/reveal.js#dependencies
+        dependencies: [
+          { src: 'plugin/markdown/marked.js' },
+          { src: 'plugin/markdown/markdown.js' },
+          { src: 'plugin/notes/notes.js', async: true },
+          { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+        ]
+      });
+    </script>
+  </body>
+</html>
